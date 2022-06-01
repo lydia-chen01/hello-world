@@ -1,0 +1,187 @@
+---
+title: "Project 2C Lydia Chen"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+# Introduction
+## Scientific Question
+Are the amino acid sequences and thus the structure of the DNA binding domain of the human FOXO3 gene more than 70% identical to the FOXO3 gene in mice, pigs, and chimpanzees?
+
+## Background
+FOXO3 is a gene that is a part of the forkhead family of transcription factors. Specifically, FOXO3 encodes the transcription factor forkhead box O-3 (Morris et al., 2015). It has long been associated with longevity in humans, and many studies have been done on its relation to healthy aging. Forkhead box proteins are involved in many different cellular functions, such as cellular proliferation, and they have domains that are specific for DNA binding (Tsai et al., 2007). Notably, the "O" class forkhead proteins, of which FOXO3 is a part of, all are highly conserved, and they all have a forkhead DNA-binding domain (Tsai et al., 2007). FOXO3 specifically is involved in the PI3K/Akt signaling pathway. When it is not phosphorylated, FOXO3 localizes at the nucleus to regulate gene transcription (Stefanetti et al., 2018). However, when the PI3K//Akt pathway phosphorylates FOXO3, it then leaves the nucleus and becoems inactive (Stefanetti et al., 2018). 
+
+Due to the many roles of FOXO3 and its importance in longetivity and healthy aging in humans, as well as its involvement in transcriptional activity, it is interesting to see whether the DNA binding domain of the human FOXO3 gene is highly conserved in other species as well. The data for the multiple sequence alignment is from Uniprot, while the data for homology modeling is from PDB.
+
+
+## Scientific Hypothesis
+If the human FOXO3 protein sequence is more than 70% similar to FOXO3 in other species, and the structure of the DNA-binding domain is not affected by differences in sequence, then FOXO3's DNA binding domain is highly conserved across these species.
+
+## Description
+To look at the similarity of the FOXO3 amino acid sequence between different species, I performed multiple sequence alignment on the amino acid sequences of the human, mouse, pig, and chimpanzee FOXO3 gene. To download the data for multiple sequence alignment, I went to Uniprot and searched the database for "FOXO3", and downloaded the 4 sequences into one fasta file. To visualize the similarity of the sequences, I analyzed the data from multiple sequence alignment using sequence logos, and focused on the section between amino acids 158 to 253, since this is where the DNA binding domain is located. 
+
+Next, to look at the structures of the DNA binding domains for FOXO3 in each of the species, I used homology modeling to model the DNA binding domain of FOXO3 in mice, pigs, and chimpanzees on top of the existing PDB structure for human FOXO3. I did this by first using NGLVieweR to view the structure of the human FOXO3 DNA binding domain that is available on PDB ("2UZK"), and then using SWISS-MODEL and inputting the FASTA amino acid sequences of the other three species to predict their models using human FOXO3 as a template. I then used 3D protein measurements to measure the length of the DNA binding domain by finding the distance between the first residue, Gly157, and the last residue, Ser252, of the DNA binding domain. By doing so, I can see whether or not the DNA binding domains are of the same size structurally.
+
+# Loading in Packages
+
+```{r}
+# 1. The package "Biostrings" from Bioconductor is required for the function readAAStringSet(), 
+# and it is used for the manipulation of biological sequences.
+# if (!require("BiocManager", quietly = TRUE))
+    #install.packages("BiocManager")
+
+#BiocManager::install("Biostrings")
+library(Biostrings)
+
+# 2. The package "msa" from Bioconductor is needed to run multiple sequence alignment 
+# using the function msa(). It will align two or more amino acid/DNA sequences in a fasta file.
+# if (!require("BiocManager", quietly = TRUE))
+    #install.packages("BiocManager")
+
+#BiocManager::install("msa")
+library(msa)
+
+# 3. The package "bio3d" is needed for homology modeling, to visualize PyMol structures in R. 
+# It is also needed to perform 3D protein measurements from the structures.
+# install.packages("bio3d", dependencies=TRUE)
+library(bio3d)
+
+# 4. The package "seqinr" is needed to read in fasta files, so that the sequences of genes can be analyzed.
+# install.packages('seqinr')
+library(seqinr)
+
+# 5. The package "remotes" makes it possible to install packages that are stored in remote repositories,
+# such as Github, which is where NGLVieweR is available. The function remotes::install_github("nvelden/NGLVieweR")
+# will then install NGLVieweR, which is needed to visualize the structure of the human FOXO3 gene's DNA binding
+# domain by using the function NGLVieweR(). 
+# install.packages("remotes")
+# remotes::install_github("nvelden/NGLVieweR")
+library(NGLVieweR)
+```
+
+# Bioinformatics Analysis - Multiple Sequence Alignment
+Multiple sequence alignment refers to the alignment of three or more DNA or amino acid sequences. It uses algorithms in order to identify which amino acids/nucleotides are the same between the different sequences, and where there are indels or mutations in the sequence. Mulitple sequence alignment can be used to identify evolutionary relationships between different genes, or to see where the conserved regions are between the gene in different species, which is what I am doing here. To run multiple sequence alignment in R using the msa() function, you need to read in a fasta file contaning the fasta sequences of each sequence you want to align together. You then want to convert this to an object of class XStringSet to use for the msa() function, and since I am running amino acid sequences, I want to convert it to an AAStringSet. 
+
+```{r}
+# Set up the global variable "FOXO3_unaligned", which is an AAStringSet variable consisting of the
+# amino acid sequences of the FOXO3 gene in different species. This is a global variable because it will
+# be used throughout the code so that in the future, we do not have to type out "readAAStringSet("/Users/lydiachen/Downloads/FOXO3_species.fasta")" and instead can just call the variable
+# "FOXO3_unaligned" that we defined.
+
+# The function readAAStringSet() is a built-in function from Bioconductor Biostrings that reads FASTA files in an XStringSet object. In this case, my fasta sequences are amino acid sequences, so I would apply AAStringSet. This acknowledges that my fasta file contains amino acid sequences, and this can then be used in multiple sequence alignment.
+FOXO3_unaligned <- readAAStringSet("/Users/lydiachen/Downloads/FOXO3_species.fasta")
+
+# check datatype
+typeof(FOXO3_unaligned)
+
+# identify how many sequences there are in the fasta file, thus how many sequences we are using in the msa.
+length(FOXO3_unaligned)
+
+# run the multiple sequence alignment using the msa() function, as a part of the msa package in Bioconductor
+FOXO3_msa <- msa(FOXO3_unaligned)
+
+# print the results of the multiple sequence alignment. The order is human, chimpanzee, pig, and mouse.
+print(FOXO3_msa, show = "complete")
+```
+
+# Data Analysis - Sequence Logos
+Sequence logos are used to visualize sequence conservation from multiple sequence alignment. After msa is performed, we will know which regions of the sequence are most conserved (i.e. the sequence is identical/very similar between sequences), and this can be shown in a sequence logo. The sequence logo will take the consensus sequence, which is the sequence that contains the most frequently seen residue in each spot from the alignment, and show the diversity of the sequences. The bigger a letter is in a specific position, the more frequently it appears in all the sequences at that location. To create a sequence logo, we will need to input the data from the multiple sequence alignment in order to see which residues are most frequent in each spot, and which areas are the most conserved. This information will then be used to create the sequence logo.
+
+```{r}
+# The function msaPrettyPrint creates sequence logos from msa data. I run msaPrettyPrint using FOXO3_msa, which
+# is a global variable containing the multiple sequence alignment results, and the results from msaPrettyPrint 
+# will be generated as a "tex" file. This will create a LaTex file that will include the sequence logo. To actually
+# visualize the sequence logo, I set showLogo = "top" to display the letters on top of the msa, and setting 
+# verbose = TRUE will print the progress messages. 
+
+# Source: https://bioconductor.org/packages/devel/bioc/vignettes/msa/inst/doc/msa.pdf
+# Note: I originally set output = "pdf", which was able to run and produce a pdf file with the sequence logo, but for some reason, it would not knit. I am also unable to attach the pdf file to this R Notebook.
+seqlogo <- msaPrettyPrint(FOXO3_msa, output="tex", showNames="none", showLogo="top",
+consensusColor="ColdHot", showLegend=FALSE,
+askForOverwrite=FALSE, verbose = TRUE)
+```
+
+# Bioinformatics Analysis - Homology Modeling
+Homology modeling refers to using an amino acid sequence for which the structure is unknown and a template structure, usually a related protein, to predict the 3D structure of the amino acid sequence. There are multiple steps involved in this process. First, sequence alignment is needed to identify the conserved regions and differences in the sequences of the template and the target, Then, these results are used to create the backbone of the new structure, and further modeling of the loops and side chains is performed. Lastly, the model is optimized and validated. To perform homology modeling, I first searched the PDB database for the known structure of the human FOXO3 gene's DNA binding domain. I then used SWISS-MODEL to predict the structures of FOXO3 for the other three species, since their structures are unknown, and the human FOXO3 gene's structure was used as the template. To use SWISS-MODEL, the amino acid sequences in fasta format are inputted into SWISS-MODEL, and SWISS-MODEL searches the PDB database for a known template. Once SWISS-MODEL produces the predicted structures, I saved them as PDB files, and opened them in PyMol. I then visualize these PyMol structures in R. 
+
+```{r}
+# read in fasta sequence of human FOXO3 gene's DNA binding domain, as found in PDB database with identifier "2UZK"
+fasta_human <- read.fasta("~/Desktop/BIMM143/2uzk.fasta")
+ 
+# use read.fasta.pdb() to read in "fasta_human", which is now a global variable and can be used to call the "2uzk.fasta" file. Set pdbext = ".pdb" to find the pdb file with the same name (must be the same name as the beginning of the fasta file). 
+
+#Note: this runs in R Notebook, but for some reason, I cannot knit. The error states "no corresponding PDB files found".
+#pdb_human <- read.fasta.pdb(fasta_human, pdbext = ".pdb")
+
+# run the pymol() function on pdb_human to visualize the structure of the human FOXO3 DNA binding domain in Pymol. Outputs a R.pml file.
+#pymol(pdb_human)
+
+# read in fasta sequence of the other three species (mouse, pig, chimpanzee). This fasta file was created by creating a copy of "FOXO3_species_limited.fasta" and deleting the human sequence. I also had to manually delete all parts of the sequence that were not part of the DNA binding domain (residues 157 - 252), since otherwise it would not match with the sequence from the pdb file.
+fasta <- read.fasta("~/Desktop/BIMM143/FOXO3_species_limited.fasta")
+
+# read in "fasta" variable from above, which is now a global variable, using read.fasta.pdb(), and set pdbext = ".pdb" to find the pdb file with the same name. This will call the three pdb files for mouse, pig, and chimpanzee that were created from SWISS-MODEL. Name this "pdb", and run this through the functino pymol() to create a R.pml file that contains the PyMol structures for the three species.
+
+# Note: same thing as above, I cannot knit.
+#pdb <- read.fasta.pdb(fasta, pdbext = ".pdb")
+#pymol(pdb)
+```
+
+```{r}
+# To view structure of the template human FOXO3 gene's DNA binding domain, use read.pdb() function 
+# to access the online PDB file from the database. The input is "2UZK", which is the identifier for human FOXO3
+# DNA binding domain. Use a global variable "human_pdb" that stores this, so we can refer to the pdb as "human_pdb"
+# from now on.
+
+human_pdb <- read.pdb("2UZK")
+
+# different attempt to view PyMol structure in R, by calculating modes.
+
+# calculate normal modes. Normal modes are used to study protein flexibility.
+modes <- nma(human_pdb)
+# plot normal modes of human FOXO3 gene DNA binding domain.
+plot(modes)
+
+# calculate cross-correlation matrix from normal modes
+cm <- dccm.nma(modes)
+
+# create PyMol script that will draw colored lines between correlated residues, and saves the script file in the working directory.
+pymol(cm, modes$xyz)
+
+# ALternatively, view FOXO3 DNA-binding domains of human, mouse, pig, and chimpanzee using NGLVieweR. Load human protein by PDB code for function NGLVieweR(), or by PDB files for the predicted structures for other species.
+# To visualize it in the cartoon mode, use the function addRepresentation("cartoon").
+NGLVieweR("2UZK") %>%
+addRepresentation("cartoon")
+
+NGLVieweR("FOXO3_mouse.pdb") %>%
+addRepresentation("cartoon")
+
+NGLVieweR("FOXO3_pig.pdb") %>%
+addRepresentation("cartoon")
+
+NGLVieweR("FOXO3_chimpanzee.pdb") %>%
+addRepresentation("cartoon")
+
+```
+# Data Analysis - 3D Protein Measurements
+3D protein measurements are used to further analyze the 3D structure of a protein, especially if it is a predicted model. It can be used to measure the distance between certain residues or domains, and by doing so, we can compare the structures of the same region in different structures. In this case, we want to compare the DNA binding domains of FOXO3 in different species, namely humans, mice, pigs, and chimpanzees. To do so, one 3D protein measurement we can do is measure the distance between the first residue of the DNA binding domain, Gly157, and the last residue of the DNA binding domain, Ser252. 
+
+```{r}
+# use for loop to avoid redundant code. "2uzk" is the file for human. This for loop states that for each file, read in the file using read.pdb().
+# The variable "file" is a local variable, since it only applies within this for loop. It refers to the four pdb files for each of the species, but outside of the for loop, it does not refer to the vector of these files. Similarly, the variables "coord1", "coord2", and measurements are all local variables within the for loop.
+for (file in c("2uzk", "FOXO3_mouse.pdb", "FOXO3_pig.pdb", "FOXO3_chimpanzee.pdb")) {
+  seq <- read.pdb(file)
+
+  # set the coordinates of Gly157 and Ser252, the beginning and end of the DNA binding domain, which is their     location in 3D (x,y,z).
+  coord1 <- seq$atom[157, c("x","y","z")]
+  coord2 <- seq$atom[252, c("x","y","z")]
+
+  # calculate the distance between the two 3D coordinates to determine how far apart they are, and print this distance.
+  measurements <- dist.xyz(coord2, coord1)
+  print(measurements)
+}
+```
+# Analyzing the Results
+First off, looking at the multiple sequence alignment, it appears that the sequences for human, mouse, pig, and chimpanzee are highly conserved throughout the entire FOXO3 gene. There are pretty much no differences in the sequences, except for a couple spots where there are differing residues. However, there are no differing residues at all within the DNA binding domain, which is between residues 157 and 252, which means that all four species have the exact same sequence in the DNA binding domain. Similarly, from the homology modeling, we can see that the 3D measurements for the DNA binding domain of all four species is the same, except for the human FOXO3 gene, which I think is due to a calculation error I have made, and will fix for Project 2D. This means that the DNA binding domain for all four species is the same size from its first to last residue, which makes sense since the amino acid sequence is exactly the same. This means that to answer my scientific question and address my scientific hypothesis, the amino acid sequences and the structure of the DNA binding domain of the human FOXO3 gene are definitely more than 70% identical to the FOXO3 gene in mice, pigs, and chimpanzees. In fact, they are more than likely identical, meaning that the FOXO3 gene is highly conserved in all these species.  
